@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     JWT_ALGORITHM: str
     JWT_EXPIRATION_MINUETS: int
+    CODE_EXPIRATION_MINUTES:int
+    REDIS_URL : str
 
 
 settings = Settings()

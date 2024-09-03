@@ -1,8 +1,8 @@
-"""added payment model
+"""PAUSED enum for status added
 
-Revision ID: 43ff92dfaf17
-Revises: bfa69f41906e
-Create Date: 2023-09-08 09:52:54.268223
+Revision ID: 1856652f0b3d
+Revises: 139516e77d6e
+Create Date: 2024-07-19 16:42:03.301084
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '43ff92dfaf17'
-down_revision: Union[str, None] = 'bfa69f41906e'
+revision: str = '1856652f0b3d'
+down_revision: Union[str, None] = '139516e77d6e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
