@@ -19,12 +19,13 @@ docs_build
 site_build
 venv
 docs.zip
-archive.zip
-
+archive.zip 
+.nx*
 # vim temporary files
 *~
 .*.sw?
 .cache
+*.env
 
 # macOS
 .DS_Store
