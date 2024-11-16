@@ -1,17 +1,19 @@
 FROM python:3.11-alpine
 
-WORKDIR /backend
+WORKDIR /app
 
-RUN apk add --no-cache gcc musl-dev postgresql-dev
+RUN apk add --no-cache gcc musl-dev postgresql-dev libffi-dev
 
 RUN pip install --upgrade pip
 
-COPY backend/requirements.txt /backend/requirements.txt
+COPY requirements.txt /app/requirements.txt
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire backend folder
-COPY backend /backend
+COPY . /app
 
+RUN chmod +x docker/Entrypoint.sh
 
 EXPOSE 8000
+
+CMD ["sh", "docker/Entrypoint.sh"]

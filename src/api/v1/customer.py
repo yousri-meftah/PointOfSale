@@ -49,7 +49,7 @@ router = APIRouter(
     dependencies=[Depends(oauth2_scheme) , Depends(allow_action_by_roles)]
 )
 
-"""@router.get("/", response_model=CustomersOut)
+@router.get("/", response_model=CustomersOut)
 def list_customers_route(
     db: DBSession = Depends(get_db),
     page: int = Query(1, ge=1),
@@ -72,10 +72,10 @@ def list_customers_route(
         return OurBaseModelOut(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message="An error occurred while retrieving customers."
-        )"""
+        )
 
 
-@router.get("/", response_model=CustomersOut)
+"""@router.get("/", response_model=CustomersOut)
 async def list_customers_route(
     db: DBSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
@@ -116,7 +116,7 @@ async def list_customers_route(
         return OurBaseModelOut(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message="An error occurred while retrieving customers."
-        )
+        )"""
 
 
 
