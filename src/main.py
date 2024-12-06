@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 import uvicorn
-from api.v1 import employee,auth , session, product, order, order_line, customer , category , pricelist , program , program_item , pricelist_line
+from api.v1 import employee,auth , session, product, order,dashboard, order_line, customer , category , pricelist , program , program_item , pricelist_line
 
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(employee.router, prefix="/employee", tags=["employee"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(product.router, prefix="/products", tags=["products"])
+app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(category.router, prefix="/categories", tags=["categories"])
 app.include_router(program.router, prefix="/programs", tags=["programs"])
 app.include_router(session.router, prefix="/sessions", tags=["sessions"])

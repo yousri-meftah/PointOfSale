@@ -15,7 +15,7 @@ class CustomerOut_withstatus(OurBaseModelOut):
 
 class CustomerOut(OurBaseModel):
     id : int
-    name: str
+    name: Optional[str]=None
     email: str
     pricelist_id: int| None
 

@@ -26,6 +26,6 @@ archive.zip
 .*.sw?
 .cache
 *.env
-
+.venv
 # macOS
 .DS_Store

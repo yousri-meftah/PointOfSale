@@ -130,122 +130,155 @@ def handle_program_functionality(order, order_lines, program_codes, db):
 
 
 def create_order(db: Session, order_data: OrderCreate):
-    order_lines_data = order_data.products_ids
+    try:
+        order_lines_data = order_data.products_ids
 
-    # Validate all product IDs before proceeding
-    product_ids = [product_id for product_id, _ in order_lines_data]
-    products = db.query(ProductModel).filter(ProductModel.id.in_(product_ids)).all()
+        # Validate product IDs
+        product_ids = [product_id for product_id, _ in order_lines_data]
+        products = db.query(ProductModel).filter(ProductModel.id.in_(product_ids)).all()
 
-    if len(products) != len(product_ids):
-        invalid_product_ids = set(product_ids) - {product.id for product in products}
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid product IDs: {invalid_product_ids}"
-        )
-
-    # Determine pricing based on customer price list if applicable
-    customer_price_list_lines = {}
-    pricelist_id = None
-    if order_data.customer_id:
-        customer = db.query(CustomerModel).filter_by(id=order_data.customer_id).first()
-        if customer and customer.pricelist_id:
-            pricelist_id = customer.pricelist_id
-            price_list_lines = db.query(PriceListLineModel).filter_by(pricelist_id=pricelist_id).all()
-            customer_price_list_lines = {line.product_id: line.new_price for line in price_list_lines}
-
-    # Create the order
-    new_order = OrderModel(
-        customer_id=order_data.customer_id,
-        session_id=order_data.session_id,
-        created_on=order_data.created_on,
-        total_price=0,  
-        pricelist_id=pricelist_id
-    )
-
-    db.add(new_order)
-    db.flush()  # Use flush instead of commit to get the new order ID
-
-    # Create order lines
-    order_lines = []
-    for product_id, quantity in order_lines_data:
-        unit_price = customer_price_list_lines.get(product_id, db.query(ProductModel).filter_by(id=product_id).first().unit_price)
-        total_price = unit_price * quantity
-        order_line = OrderLineModel(
-            order_id=new_order.id,
-            product_id=product_id,
-            unit_price=unit_price,
-            quantity=quantity,
-            total_price=total_price
-        )
-        order_lines.append(order_line)
-        new_order.total_price += total_price
-        product = db.query(ProductModel).filter_by(id=product_id).first()
-        if(product.quantity < quantity):
+        if len(products) != len(product_ids):
+            invalid_product_ids = set(product_ids) - {product.id for product in products}
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Product {product_id} is out of stock"
+                detail=f"Invalid product IDs: {invalid_product_ids}"
             )
-        product.quantity -= quantity
-        db.add(product)
 
-    db.bulk_save_objects(order_lines)
-    db.flush()
+        # Check customer price list
+        customer_price_list_lines = {}
+        pricelist_id = None
+        if order_data.customer_id:
+            customer = db.query(CustomerModel).filter_by(id=order_data.customer_id).first()
+            if customer and customer.pricelist_id:
+                pricelist_id = customer.pricelist_id
+                price_list_lines = db.query(PriceListLineModel).filter_by(pricelist_id=pricelist_id).all()
+                customer_price_list_lines = {line.product_id: line.new_price for line in price_list_lines}
 
-    # Handle program functionality if program codes are provided
-    if order_data.program_item_id:
-        handle_program_functionality(new_order, order_lines, order_data.program_item_id, db)
+        # Create the order
+        new_order = OrderModel(
+            customer_id=order_data.customer_id,
+            session_id=order_data.session_id,
+            created_on=order_data.created_on,
+            total_price=0,
+            pricelist_id=pricelist_id
+        )
+        db.add(new_order)
+        db.flush()  # Retrieve new_order.id
 
-    db.commit()
-    db.refresh(new_order)
+        # Create order lines
+        order_lines = []
+        for product_id, quantity in order_lines_data:
+            product = db.query(ProductModel).filter_by(id=product_id).first()
+            if product.quantity < quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Product {product_id} is out of stock"
+                )
+            unit_price = customer_price_list_lines.get(product_id, product.unit_price)
+            total_price = unit_price * quantity
+            order_line = OrderLineModel(
+                order_id=new_order.id,
+                product_id=product_id,
+                unit_price=unit_price,
+                quantity=quantity,
+                total_price=total_price
+            )
+            order_lines.append(order_line)
+            new_order.total_price += total_price
 
-    #return new_order
+            # Update product stock
+            product.quantity -= quantity
+            db.add(product)
+
+        db.bulk_save_objects(order_lines)
+        db.commit()  # Flush changes to DB for order lines
+
+        # Apply program functionality if provided
+        if order_data.program_item_id:
+            handle_program_functionality(new_order, order_lines, order_data.program_item_id, db)
+
+        db.commit()  # Commit transaction
+
+    except Exception as e:
+        db.rollback()  # Rollback on any error
+        print(f"Error during order creation: {e}")  # Log the error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the order."
+        )
+
+
+
 
 def handle_program_functionality(order, order_lines, program_codes, db):
-    for code in program_codes:
-        program_item = db.query(ProgramItemModel).filter_by(code=code).first()
-        if not program_item or program_item.status != CodeStatusEnum.ACTIVE:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid or inactive program code: {code}"
+    try:
+        for code in program_codes:
+            program_item = db.query(ProgramItemModel).filter_by(code=code).with_for_update().first()
+
+            if not program_item or program_item.status != CodeStatusEnum.ACTIVE:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid or inactive program code: {code}"
+                )
+
+            program = (
+                db.query(Program)
+                .join(ProgramItemModel, Program.id == ProgramItemModel.program_id)
+                .filter(ProgramItemModel.code == code)
+                .first()
             )
-        program = program_item.program
 
-        if program.program_type == ProgramTypeEnum.DISCOUNT:
-            order.total_price *= (1 - program.discount / 100)
-        elif program.program_type == ProgramTypeEnum.BUY_X_GET_Y:
-            buy_product_in_order = False
-            get_product_in_order = False
-            get_product_line = None
+            if not program:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"No associated program found for code: {code}"
+                )
 
-            for line in order_lines:
-                if line.product_id == program.product_buy_id:
-                    buy_product_in_order = True
-                if line.product_id == program.product_get_id:
-                    get_product_in_order = True
-                    get_product_line = line
+            # Apply program functionality
+            if program.program_type == ProgramTypeEnum.DISCOUNT:
+                order.total_price *= (1 - program.discount / 100)
 
-            if buy_product_in_order:
-                if get_product_in_order:
-                    # If the get product is already in the order, reduce its price
-                    order.total_price -= get_product_line.total_price
-                    get_product_line.unit_price = 0
-                    get_product_line.total_price = 0
-                else:
-                    # If the get product is not in the order, add it for free
-                    order_line = OrderLineModel(
-                        order_id=order.id,
-                        product_id=program.product_get_id,
-                        unit_price=0,
-                        quantity=1,  # Adjust quantity as needed
-                        total_price=0
-                    )
-                    db.add(order_line)
+            elif program.program_type == ProgramTypeEnum.BUYXGETY:
+                buy_product_in_order = any(
+                    line.product_id == program.product_buy_id for line in order_lines
+                )
+                get_product_line = next(
+                    (line for line in order_lines if line.product_id == program.product_get_id), None
+                )
 
-        # Update the status of the program code
-        program_item.status = CodeStatusEnum.INACTIVE
-        db.add(program_item)
+                if buy_product_in_order:
+                    if get_product_line:
+                        # Make the 'get' product free
+                        order.total_price -= get_product_line.total_price
+                        get_product_line.unit_price = 0
+                        get_product_line.total_price = 0
+                    else:
+                        # Add the 'get' product for free
+                        new_order_line = OrderLineModel(
+                            order_id=order.id,
+                            product_id=program.product_get_id,
+                            unit_price=0,
+                            quantity=1,
+                            total_price=0
+                        )
+                        db.add(new_order_line)
 
-    db.flush()
+            # Update program item
+            program_item.status = CodeStatusEnum.INACTIVE
+            #program_item.order_id = order.id
+            db.add(program_item)
+
+        db.flush()  # Flush changes to DB for program items
+
+    except Exception as e:
+        db.rollback()  # Rollback on any error
+        print(f"Error during program functionality handling: {e}")  # Log the error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while handling program functionality."
+        )
+
+
 
 
 def calculate_order_price(order_in: OrderIn, db: Session) -> CalculatedOrder:

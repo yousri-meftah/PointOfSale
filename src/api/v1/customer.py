@@ -15,6 +15,8 @@ from app.services.token import oauth2_scheme, RoleChecker
 from app.models.pricelist import Pricelist
 from app.utils import map_fields
 from core.redis import get_redis
+from sqlalchemy.exc import IntegrityError
+
 
 
 from datetime import datetime
@@ -205,7 +207,7 @@ def delete_customer_route(
         )
 
 
-@router.post("/bulk_add", response_model=BulkAddResponse)
+#@router.post("/bulk_add", response_model=BulkAddResponse)
 async def bulk_add_customers(
     file: UploadFile = File(...),
     db: DBSession = Depends(get_db),
@@ -271,4 +273,95 @@ async def bulk_add_customers(
         return BulkAddResponse(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message="An error occurred while adding customers."
+        )
+    
+
+@router.post("/bulk_add")
+async def bulk_add_customers(
+    force : bool =False ,
+    file: UploadFile = File(...),
+    db: DBSession = Depends(get_db)
+):
+    # Check if the uploaded file is a CSV
+    if file.content_type != 'text/csv':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Please upload a CSV file."
+        )
+
+    # Read the CSV content
+    content = await file.read()
+    csv_reader = csv.DictReader(io.StringIO(content.decode('utf-8')))
+
+    # Initialize containers for validation
+    data = []
+    can_force_errors = []
+    critical_errors = []
+    valid_customers = []
+
+    for line_number, row in enumerate(csv_reader, start=1):
+        email = row.get("email", "").strip()
+        name = row.get("name", None)
+        pricelist_id = row.get("pricelist_id", None)
+        data.append(row)
+        # Check if email is empty
+        if not email:
+            critical_errors.append({"line": line_number, "error": "Email is a required field."})
+            continue
+
+        # Check if email already exists in the database
+        if db.query(CustomerModel).filter(CustomerModel.email == email).first():
+            critical_errors.append({"line": line_number, "error": f"Email {email} already exists."})
+            continue
+
+        # Validate pricelist_id if provided
+        if pricelist_id :
+            pricelist = db.query(Pricelist).filter(Pricelist.id == pricelist_id).first()
+            if not pricelist and not force:
+                can_force_errors.append(f"Line {line_number}: Pricelist ID {pricelist_id} does not exist , It will be null if you force ")
+                pricelist_id = None
+            elif force:
+                pricelist_id = None
+
+
+        if (name == ''or name==None) and not force:
+            can_force_errors.append(f"line {line_number}: name {name} does not have a value , It will be null if you force ")
+        # Add customer to the valid list
+        valid_customers.append(CustomerModel(
+            email=email,
+            name=name if name else None,
+            pricelist_id=int(pricelist_id) if pricelist_id else None
+        ))
+
+    # Check for errors and return appropriate response
+    if critical_errors:
+        return {
+            "status": "error",
+            "errors": critical_errors,
+            "can_force": can_force_errors,
+            "data": data,
+        }
+
+    # If there are no critical errors, allow force import or proceed to store the file
+    if can_force_errors:
+        return {
+            "status": "can_force",
+            "errors": [],
+            "can_force": can_force_errors,
+            "data": data,
+        }
+
+    # Save valid customers to the database
+    try:
+        db.add_all(valid_customers)
+        db.commit()
+        return {
+            "status": "imported",
+            "message": f"Successfully imported {len(valid_customers)} customers."
+        }
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
         )

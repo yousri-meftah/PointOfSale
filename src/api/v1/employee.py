@@ -117,7 +117,7 @@ async def create_employe(
         db.rollback()
         return OurBaseModelOut(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            message="Error creating user."
+            message="Error creating user. "
         )
 
 
@@ -143,7 +143,7 @@ def disactivate_employe(
 
 
 
-@router.patch("/{employee_id}", response_model=OurBaseModelOut)
+@router.put("/{employee_id}", response_model=OurBaseModelOut)
 async def update_employe(
     employee: EmployeeUpdate,
     employee_id: int,
