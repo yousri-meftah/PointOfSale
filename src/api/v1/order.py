@@ -24,11 +24,27 @@ def list_orders_route(
     try:
         orders, total_records = list_orders(db, page, page_size)
         total_pages = (total_records + page_size - 1) // page_size
+        
+        res = []
+        for order in orders:
+            pr = []
+            for i in order.program_item:
+                pr.append(i.code)
+            res.append(OrderOut(
+                id=order.id,
+                number = order.number,
+                customer_id= order.customer_id,
+                session_id= order.session_id,
+                created_on = order.created_on,
+                total_price = order.total_price,
+                pricelist_id= order.pricelist_id,
+                program_item = pr
+            ))
 
         return OrdersOut(
             status=status.HTTP_200_OK,
             message="Orders retrieved successfully.",
-            list=orders,
+            list=res,
             page_number=page,
             page_size=page_size,
             total_pages=total_pages,

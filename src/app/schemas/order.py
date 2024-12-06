@@ -3,6 +3,7 @@ from typing import Optional,Dict
 from pydantic import BaseModel
 from .base import OurBaseModel, OurBaseModelOut, PagedResponse
 from .order_line import OrderLine
+from ..models import ProgramItem
 
 class Order(OurBaseModel):
     number: str
@@ -19,7 +20,7 @@ class OrderOut(OurBaseModel):
     created_on: Optional[datetime] = None
     total_price: float
     pricelist_id: Optional[int] = None
-    program_item: Optional[list[int]] = None
+    program_item: Optional[list[str]] = []
 
 class OrdersOut(PagedResponse):
     list: list[OrderOut]

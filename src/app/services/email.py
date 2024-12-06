@@ -54,7 +54,7 @@ async def send_reset_password_email(email: str, db: Session):
     template_name = "reset_password.html"
 
     fm = FastMail(conf)
-    await fm.send_message(message, template_name=template_name)
+    #await fm.send_message(message, template_name=template_name)
     db.commit()
 
 
@@ -65,7 +65,6 @@ async def send_activation_email(employee: Create_employee, db: Session):
     expiry_date = datetime.datetime.now() + datetime.timedelta(minutes=expire_minutes)
     token = Activation_account( Employee_id =employee.id ,token=jwt, created_at=expiry_date , status = Token_status.PENDING)
     db.add(token)
-
 
     link = "http://localhost:3000/activate/" + str(jwt)
     message = MessageSchema(

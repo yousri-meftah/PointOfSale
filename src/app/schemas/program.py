@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, root_validator, ValidationError,model_val
 from typing import Optional
 from typing import List, Dict
 from app.models import ProgramItem
+
 class ProgramCreate(BaseModel):
     name: str
     description: str
@@ -16,7 +17,7 @@ class ProgramCreate(BaseModel):
     discount: Optional[float] = None
     product_buy_id: Optional[int] = None
     product_get_id: Optional[int] = None
-    program_status_id: int
+    program_status: int
     count : int
 
     @model_validator(mode="after")
@@ -67,12 +68,13 @@ class ProgramItem_out(OurBaseModel):
 
 class programItem_out(BaseModel):
     id: int
-    code: str
+    code: Optional[str] = None
     status: CodeStatusEnum
-    order_id: int | None
+    order_id: Optional[int] = None
     discount: float | None
     product_buy_id: int | None
     product_get_id: int | None
+
 
 
 class ProgramItemsMap(OurBaseModelOut):

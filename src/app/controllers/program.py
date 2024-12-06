@@ -27,7 +27,7 @@ async def create_program_with_items(
             discount=program_data.discount,
             product_buy_id=program_data.product_buy_id,
             product_get_id=program_data.product_get_id,
-            program_status=program_data.program_status_id
+            program_status=program_data.program_status
         )
 
         db.add(new_program)
@@ -108,24 +108,14 @@ def get_coupon_program(db: Session) -> List[programItem_out]:
 
 
 def get_BUTXGETY_program(db: Session) -> List[programItem_out]:
-    """
-    id: int
-    code: str
-    status: CodeStatusEnum
-    order_id: int | None
-    discount: float | None
-    product_buy_id: int | None
-    product_get_id: int | None
-    """
-    program_items = db.query(ProgramItem).join(Program).filter(Program.program_type == "BUYXGETY").all()
+    program_items = db.query(Program).filter(Program.program_type == "BUYXGETY").all()
     program_list = [programItem_out(
         id=item.id,
-        code=item.code,
-        status=item.status,
-        order_id=item.order_id,
-        discount=item.program.discount,
-        product_buy_id=item.program.product_buy_id,
-        product_get_id=item.program.product_get_id
+        code = str(item.id),
+        status=CodeStatusEnum.ACTIVE,
+        discount=item.discount,
+        product_buy_id=item.product_buy_id,
+        product_get_id=item.product_get_id
     ) for item in program_items]
     return program_list
 

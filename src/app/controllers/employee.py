@@ -59,9 +59,7 @@ async def create_employee(db: Session, employee: Create_employee):
     db_employee = Employee(**employee.dict(exclude={"roles"}))
     db.add(db_employee)
     db.flush()
-    #result =
     create_employee_roles(db, db_employee, employee.roles)
-    #db.refresh(db_employee)
     try:
         await send_activation_email(db_employee, db)
     except Exception as e:
