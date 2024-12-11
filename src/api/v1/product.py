@@ -14,12 +14,12 @@ from app.controllers.product import get_products, create_product, update_product
 
 
 router = APIRouter(
-    dependencies=[Depends(oauth2_scheme) , Depends(allow_action_by_roles)]
+    dependencies=[Depends(oauth2_scheme) ]
 )
 
 @router.get("/", response_model=ProductsOut)
 async def list_products(
-    db: DBSession = Depends(get_db),
+    db: DBSession = Depends(get_db), 
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1)
 ):
@@ -43,7 +43,7 @@ async def list_products(
         )
 
 @router.post("/", response_model=OurBaseModelOut)
-async def create_product_endpoint(product: Product, db: DBSession = Depends(get_db)):
+async def create_product_endpoint(product: Product, db: DBSession = Depends(get_db), ok = Depends(allow_action_by_roles)):
     try:
         new_product = await create_product(db, product)
         return OurBaseModelOut(
@@ -63,7 +63,7 @@ async def create_product_endpoint(product: Product, db: DBSession = Depends(get_
         )
 
 @router.patch("/{product_id}", response_model=return_products)
-async def update_product_endpoint(product_id: int, product: Product, db: DBSession = Depends(get_db)):
+async def update_product_endpoint(product_id: int, product: Product, db: DBSession = Depends(get_db),ok = Depends(allow_action_by_roles)):
     try:
         updated_product = await update_product(db, product_id, product)
         return return_products(

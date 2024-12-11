@@ -7,7 +7,7 @@ from app.enums import Role
 from core.database import get_db
 from app.services.token import oauth2_scheme, RoleChecker
 
-allow_action_by_roles = RoleChecker([Role.SUPER_USER, Role.INVENTORY_MANAGER])
+allow_action_by_roles = RoleChecker([Role.SUPER_USER, Role.INVENTORY_MANAGER,Role.VENDOR])
 
 router = APIRouter(
     dependencies=[Depends(oauth2_scheme) , Depends(allow_action_by_roles)]
