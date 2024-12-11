@@ -21,10 +21,16 @@ async def get_token(data: OAuth2PasswordRequestForm, db: Session):
 
     user = db.query(UserModel).filter(UserModel.email == data.username).first()
 
-    if not user or user.status == AccountStatus.INACTIVE:
+    if not user :
         raise HTTPException(
             status_code=400,
             detail="Email is not registered with us.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if user.status == AccountStatus.INACTIVE:
+        raise HTTPException(
+            status_code=400,
+            detail="you are not allwed to entre this application right now , contact the admin.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     password = hash_password(data.password)

@@ -154,6 +154,10 @@ def create_order(db: Session, order_data: OrderCreate):
                 price_list_lines = db.query(PriceListLineModel).filter_by(pricelist_id=pricelist_id).all()
                 customer_price_list_lines = {line.product_id: line.new_price for line in price_list_lines}
 
+        if order_data.pricelist_id:
+            pricelist_id = order_data.pricelist_id
+            price_list_lines = db.query(PriceListLineModel).filter_by(pricelist_id=pricelist_id).all()
+            customer_price_list_lines = {line.product_id: line.new_price for line in price_list_lines}
         # Create the order
         new_order = OrderModel(
             customer_id=order_data.customer_id,
@@ -191,7 +195,7 @@ def create_order(db: Session, order_data: OrderCreate):
             db.add(product)
 
         db.bulk_save_objects(order_lines)
-        db.commit()  # Flush changes to DB for order lines
+        db.flush()  # Flush changes to DB for order lines
 
         # Apply program functionality if provided
         if order_data.program_item_id:
@@ -265,7 +269,7 @@ def handle_program_functionality(order, order_lines, program_codes, db):
 
             # Update program item
             program_item.status = CodeStatusEnum.INACTIVE
-            #program_item.order_id = order.id
+            program_item.order_id = order.id
             db.add(program_item)
 
         db.flush()  # Flush changes to DB for program items
@@ -355,24 +359,33 @@ async def update_order(db: Session, order_id: int, order_data: OrderUpdate):
     return order
 
 
-def get_order_products(db: Session, order_id: int):
-    order = db.query(OrderModel).filter_by(id=order_id).first()
+def get_order_products(db: Session, order):
+    
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Order with ID {order_id} not found"
+            detail=f"Order with ID {order.id} not found"
         )
-
+    order_id=order.id
     order_lines = db.query(OrderLineModel).filter_by(order_id=order.id).all()
     if not order_lines:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No products found for order ID {order_id}"
         )
-
-    return [OrderLineSchema(
-        product_id=line.product_id,
-        unit_price=line.unit_price,
-        quantity=line.quantity,
-        total_price=line.total_price
-    ) for line in order_lines]
+    array = []
+    for line in order_lines:
+        array.append(
+            OrderLineSchema(
+            product_id=line.product_id,
+            unit_price=line.unit_price,
+            quantity=line.quantity,
+            total_price=line.total_price
+        )
+        )
+    code = db.query(ProgramItemModel).join(Program,ProgramItemModel.program_id ==Program.id).filter(ProgramItemModel.order_id==order_id).first()
+    if code:
+        a=code.code
+    else:
+        a = None
+    return array , a

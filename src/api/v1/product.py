@@ -66,10 +66,9 @@ async def create_product_endpoint(product: Product, db: DBSession = Depends(get_
 async def update_product_endpoint(product_id: int, product: Product, db: DBSession = Depends(get_db)):
     try:
         updated_product = await update_product(db, product_id, product)
-        return ProductsOut(
+        return return_products(
             status=status.HTTP_200_OK,
             message="Product updated successfully.",
-            products=[updated_product]
         )
     except HTTPException as e:
         return OurBaseModelOut(

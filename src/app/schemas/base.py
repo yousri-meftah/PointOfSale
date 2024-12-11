@@ -13,3 +13,4 @@ class PagedResponse(OurBaseModelOut):
     page_size: int | None
     total_pages: int | None
     total_records: int | None
+

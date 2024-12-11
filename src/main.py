@@ -46,7 +46,7 @@ app.include_router(customer.router, prefix="/customers", tags=["customers"])
 
 app.include_router(pricelist.router, prefix="/pricelists", tags=["pricelists"])
 
-#[TODO] still don't know what function should be here
+#[TODO] still don't know what are the functions should be here
 #app.include_router(program_item.router, prefix="/program_items", tags=["program items"])
 
 
