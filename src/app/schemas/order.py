@@ -86,7 +86,8 @@ class OrderLineSchema( OurBaseModel):
 class order_details(OurBaseModelOut):
     program_item : Optional[list[str]] = []
     session_id: int
-    customer_id:Optional[int] = None
+    customer_name:Optional[str] = None
     total_price: float
-    pricelist_id: Optional[int] = None
+    pricelist_name: Optional[str] = None
+    code : Optional[str] = None
     products : Optional[list[OrderLineSchema]] = []

@@ -8,6 +8,8 @@ from app.models.product import Product
 from app.schemas.order import PriceCalculationOut,OrderIn,CalculatedOrder,OrdersOut,order_details
 from app.enums import Role
 from app.models.order import Order as OrderModel
+from app.models import Customer
+from app.models import Pricelist as PricelistModel
 from core.database import get_db
 from app.services.token import oauth2_scheme, RoleChecker
 from app.models.session import Session as SessionModel
@@ -117,12 +119,25 @@ async def create_order_endpoint(
 @router.get("/orders/{order_id}/products", response_model=order_details)
 def read_order_products(order_id: int, db: DBSession = Depends(get_db)):
     try:
-        products = get_order_products(db, order_id)
         order = db.query(OrderModel).filter(OrderModel.id == order_id).first()
+        products,code = get_order_products(db, order)
+        
+        pricelist_id = order.pricelist_id
+        pricelist = db.query(PricelistModel).filter(PricelistModel.id==pricelist_id).first()
+        pricelist_name = pricelist.name if pricelist else None
+        customer_id = order.customer_id
+        customer = db.query(Customer).filter(Customer.id==customer_id).first()
+        customer_name=None
+        if customer :
+            customer_name=customer.name
         return order_details(
             status=status.HTTP_200_OK,
+            code = code,
             message="Order products retrieved successfully.",
-            **order.__dict__,
+            pricelist_name=pricelist_name,
+            customer_name=customer_name,
+            total_price=order.total_price,
+            session_id=order.session_id,
             products=products
         )
     except HTTPException as e:
@@ -133,7 +148,7 @@ def read_order_products(order_id: int, db: DBSession = Depends(get_db)):
 
 
 
-@router.patch("/{order_id}", response_model=OurBaseModelOut)
+#@router.patch("/{order_id}", response_model=OurBaseModelOut)
 async def update_order_endpoint(order_id: int, order: Order, db: DBSession = Depends(get_db)):
     try:
         updated_order = await update_order(db, order_id, order)

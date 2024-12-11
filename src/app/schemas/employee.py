@@ -74,10 +74,21 @@ class EmployeeUpdate(OurBaseModel):
     cnss_number: Optional[str] = None
     gender: Optional[Gender] = None
     roles: Optional[List[Role]] = None
-    account_status: Optional[AccountStatus] = None
+    status: Optional[AccountStatus] = None
     contract_type: Optional[ContractType] = None
 
 
 
+class csvReturn(BaseModel):
+    status: str
+    errors: Optional[List] = []
+    can_force: Optional[List] = []
+    data: Optional[List] = []
+    message: str
 
-
+"""{
+            "status": "error",
+            "errors": critical_errors,
+            "can_force": can_force_errors,
+            "data": data_rows,
+        }"""

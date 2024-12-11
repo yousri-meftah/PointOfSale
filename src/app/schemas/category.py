@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from .base import OurBaseModel, OurBaseModelOut
 from typing import  Optional
+
 class CategoryCreate(BaseModel):
     name: str
     description: str

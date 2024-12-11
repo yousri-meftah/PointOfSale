@@ -33,7 +33,10 @@ async def create_program_with_items(
         db.add(new_program)
         db.flush()
         db.refresh(new_program)
-
+        if program_data.count==None or program_data.count==0:
+            countt = 1
+        else:
+            countt=program_data.count
         program_items = [
             ProgramItem(
                 code=generate_random_code(),
@@ -41,7 +44,7 @@ async def create_program_with_items(
                 program_id=new_program.id,
                 order_id=None
             )
-            for _ in range(program_data.count)
+            for _ in range(countt)
         ]
 
         db.bulk_save_objects(program_items)

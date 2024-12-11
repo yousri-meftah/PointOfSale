@@ -35,7 +35,11 @@ async def update_product(db: Session, product_id: int, product_data: ProductUpda
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     for key, value in product_data.dict(exclude_unset=True).items():
         setattr(product, key, value)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        print(e)
+        raise Exception
     db.refresh(product)
     return product
 
